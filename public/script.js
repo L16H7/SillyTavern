@@ -6621,14 +6621,20 @@ function getFirstMessage() {
     if (Array.isArray(alternateGreetings) && alternateGreetings.length > 0) {
         const swipes = [message.mes, ...(alternateGreetings.map(greeting => getRegexedString(greeting, regex_placement.AI_OUTPUT)))];
 
-        if (!message.mes) {
-            swipes.shift();
-            message.mes = swipes[0];
-        }
+        // MY_EDIT
+        // if (!message.mes) {
+        //     swipes.shift();
+        //     message.mes = swipes[0];
+        // }
 
-        message['swipe_id'] = 0;
-        message['swipes'] = swipes;
-        message['swipe_info'] = [];
+        // message['swipe_id'] = 0;
+        // message['swipes'] = swipes;
+        // message['swipe_info'] = [];
+
+        // MY_EDIT get random message from swipes
+        swipes.push(getRegexedString(firstMes, regex_placement.AI_OUTPUT));
+        const randomMessage = swipes[Math.floor(Math.random() * swipes.length)];
+        message.msg = randomMessage;
     }
 
     return message;
