@@ -3,13 +3,35 @@ import fetch from 'node-fetch';
 import express from 'express';
 import { speak, languages } from 'google-translate-api-x';
 import crypto from 'node:crypto';
-
+import wav from 'wav';
 import { readSecret, SECRET_KEYS } from './secrets.js';
 import { GEMINI_SAFETY } from '../constants.js';
 import { getConfigValue, trimTrailingSlash } from '../util.js';
 
 const API_MAKERSUITE = 'https://generativelanguage.googleapis.com';
 const API_VERTEX_AI = 'https://us-central1-aiplatform.googleapis.com';
+
+async function saveWaveFile(
+    filename,
+    pcmData,
+    channels = 1,
+    rate = 24000,
+    sampleWidth = 2,
+) {
+    return new Promise((resolve, reject) => {
+        const writer = new wav.FileWriter(filename, {
+            channels,
+            sampleRate: rate,
+            bitDepth: sampleWidth * 8,
+        });
+
+        writer.on('finish', resolve);
+        writer.on('error', reject);
+
+        writer.write(pcmData);
+        writer.end();
+    });
+}
 
 function createWavHeader(dataSize, sampleRate, numChannels = 1, bitsPerSample = 16) {
     const header = Buffer.alloc(44);
@@ -391,7 +413,14 @@ router.post('/generate-native-tts', async (request, response) => {
             return response.status(500).json({ error: 'No audio data found in response' });
         }
 
+        const fileName = `tts_${Date.now()}`;
+        const filepath = './data/default-user/user/files';
+
         const audioBuffer = Buffer.from(audioData, 'base64');
+        await saveWaveFile(`${filepath}/${fileName}.wav`, audioBuffer);
+        const fs = await import('fs');
+        fs.promises.writeFile(`${filepath}/${fileName}.json`, JSON.stringify(requestBody, null, 2));
+
 
         //If the audio is raw PCM, wrap it in a WAV header and send it.
         if (mimeType && mimeType.toLowerCase().includes('audio/l16')) {
